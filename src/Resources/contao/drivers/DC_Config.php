@@ -8,6 +8,7 @@
 
 namespace Contao;
 
+use Symfony\Component\Finder\SplFileInfo;
 use Symfony\Component\HttpFoundation\Session\Attribute\AttributeBagInterface;
 
 /**
@@ -98,41 +99,45 @@ class DC_Config extends \DataContainer implements \editable
 		}
 	}
 
-	/**
-	 * Automatically switch to edit mode
-	 *
-	 * @return string
-	 */
+    /**
+     * Automatically switch to edit mode
+     *
+     * @return string
+     * @throws \Exception
+     */
 	public function create()
 	{
 		return $this->edit();
 	}
 
-	/**
-	 * Automatically switch to edit mode
-	 *
-	 * @return string
-	 */
+    /**
+     * Automatically switch to edit mode
+     *
+     * @return string
+     * @throws \Exception
+     */
 	public function cut()
 	{
 		return $this->edit();
 	}
 
-	/**
-	 * Automatically switch to edit mode
-	 *
-	 * @return string
-	 */
+    /**
+     * Automatically switch to edit mode
+     *
+     * @return string
+     * @throws \Exception
+     */
 	public function copy()
 	{
 		return $this->edit();
 	}
 
-	/**
-	 * Automatically switch to edit mode
-	 *
-	 * @return string
-	 */
+    /**
+     * Automatically switch to edit mode
+     *
+     * @return string
+     * @throws \Exception
+     */
 	public function move()
 	{
 		return $this->edit();
@@ -145,7 +150,23 @@ class DC_Config extends \DataContainer implements \editable
      */
 	private function generateDcaFieldsFromConfig()
     {
-        $strFilePath = TL_ROOT . '/templates/' . $GLOBALS['TL_DCA'][$this->strTable]['config']['configFile'] . '.php';
+        // search config file
+        $strFile = $GLOBALS['TL_DCA'][$this->strTable]['config']['configFile'] . '.php';
+        $strFilePath = TL_ROOT . '/templates/' . $strFile;
+
+        if(!file_exists($strFilePath))
+        {
+            try
+            {
+                // Search for the template if it is not in the lookup array (last match wins)
+                foreach (\System::getContainer()->get('contao.resource_finder')->findIn('templates')->name($strFile) as $file)
+                {
+                    /** @var SplFileInfo $file */
+                    $strFilePath = $file->getPathname();
+                }
+            }
+            catch (\InvalidArgumentException $e){}
+        }
 
         if(!file_exists($strFilePath))
         {
@@ -170,11 +191,12 @@ class DC_Config extends \DataContainer implements \editable
         return true;
     }
 
-	/**
-	 * Auto-generate a form to edit the local configuration file
-	 *
-	 * @return string
-	 */
+    /**
+     * Auto-generate a form to edit the local configuration file
+     *
+     * @return string
+     * @throws \Exception
+     */
 	public function edit()
 	{
 		$return = '';
