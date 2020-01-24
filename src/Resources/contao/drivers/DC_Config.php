@@ -151,14 +151,14 @@ class DC_Config extends \DataContainer implements \editable
 	private function generateDcaFieldsFromConfig()
     {
         // search config file
-        $strFile = $GLOBALS['TL_DCA'][$this->strTable]['config']['configFile'] . '.php';
+        $strFile = $GLOBALS['TL_DCA'][$this->strTable]['config']['configFile'];
         $strFilePath = TL_ROOT . '/templates/' . $strFile;
 
         if(!file_exists($strFilePath))
         {
             try
             {
-                // Search for the template if it is not in the lookup array (last match wins)
+                // Search for the template (last match wins)
                 foreach (\System::getContainer()->get('contao.resource_finder')->findIn('templates')->name($strFile) as $file)
                 {
                     /** @var SplFileInfo $file */

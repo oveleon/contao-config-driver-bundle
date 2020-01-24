@@ -4,37 +4,52 @@ This extension adds another driver to the Contao Open Source CMS.
 
 With the Config-Driver it is possible to load fields from a configuration file and output them in the backend. The DCA structure used by Contao is kept. It can be decided whether the data is stored in the localconfig or in an existing database column.
 
-For the storage in an existing database column, all fields of the configuration file are stored serialized.
+Configuration files located on `ROOT` under `/templates/` are used. If no template is found, installed bundles are searched afterwards. This gives you the possibility to overwrite configuration files without discarding the default.
+
+### Why?
+In our case we need a DCA in which we have the possibility to store the fields in another database column to save database queries and performance.
+
+Additionally we want to provide the possibility to deliver a standard configuration which can be extended via the backend. The driver was developed to deliver a basic theme and its SCSS variables from a bundle and let it be consumed or extended by another. For more information you can have a look at our bundle "[Oveleon Theme-Manager](https://github.com/oveleon/contao-oveleon-theme-manager-bundle)", in which the driver is used.
 
 ### Example for saving in localconfig:
-```
+For the storage in the `localconfig`, only two fields are needed.
+#### Fields
+- `dataContainer`: The driver to be used
+- `configFile`: The configuration file to be used (DCA Palette and Fields)
+
+```php
 $GLOBALS['TL_DCA']['tl_newdca'] = array
 (
     'config' => array
     (
         'dataContainer'               => 'Config',
-        'configFile'                  => 'dcaConfigFile' // Configuration-File: /templates/dcaConfigFile.php
+        'configFile'                  => 'dcaConfigFile.html5' // Use the extension html5 to make the configuration extensible in the backend. If the configuration must not be changed, choose the extension PHP.
     )
 );
 ```
 
 ### Example for saving in existing database table/column:
-
-```
+For the storage in an existing database column, all fields of the configuration file are stored serialized.
+#### Fields
+- `dataContainer`: The driver to be used
+- `ptable`: The table in which the data is to be stored
+- `configField`: The table column in which the data is stored serialized
+- `configFile`: The configuration file to be used (DCA Palette and Fields)
+```php
 $GLOBALS['TL_DCA']['tl_newdca'] = array
 (
     'config' => array
     (
         'dataContainer'               => 'Config',
-        'ptable'                      => 'tl_theme',                // Table
-        'configField'                 => 'configData',              // Column
-        'configFile'                  => 'dcaConfigFile'            // Configuration-File: /templates/dcaConfigFile.php
+        'ptable'                      => 'tl_theme', 
+        'configField'                 => 'configData',
+        'configFile'                  => 'dcaConfigFile.html5'
     )
 );
 ```
 
 ### Example of a configuration file
-```
+```php
 return array(
     'palettes' => array(                                    //
         'default'  => '{font_legend},fontsize,fontcolor'    // Optional
@@ -58,14 +73,14 @@ return array(
 ```
 
 ### Further Examples
-To continue the example from above and to be able to call the configuration in the backend via the themes, we can add another icon for each theme.
+To continue the example from above and to be able to access the configuration in the backend via e.g. the theme, we can add another icon for each theme.
 ##### config/config.php
-```
+```php
 $GLOBALS['BE_MOD']['design']['themes']['tables'][] = 'tl_newdca';
 ```
 
 ##### dca/tl_theme.php
-```
+```php
 // Add operation
 $GLOBALS['TL_DCA']['tl_theme']['list']['operations']['newdca'] = array
 (
@@ -81,8 +96,7 @@ $GLOBALS['TL_DCA']['tl_theme']['fields']['configData'] = array
     'sql'            => "text NULL"
 );
 ```
+Now we have the possibility to fill in all fields from the configuration for each theme and save each in its new database column.
 
 ##### Backend View
 ![Admin View: List](https://www.oveleon.de/share/github-assets/contao-config-driver-bundle/config-driver-example.png)
-
-Now we can edit the configuration and use it as we like.
