@@ -12,11 +12,11 @@ use Symfony\Component\Finder\SplFileInfo;
 use Symfony\Component\HttpFoundation\Session\Attribute\AttributeBagInterface;
 
 /**
- * Provide methods to edit the theme manager configuration file.
+ * Provide methods to modify data via config
  *
  * @author Daniele Sciannimanica <https://github.com/doishub>
  */
-class DC_Config extends \DataContainer implements \editable
+class DC_Config extends \DataContainer implements \listable, \editable
 {
     /**
      * Use database or localconfig
@@ -139,6 +139,50 @@ class DC_Config extends \DataContainer implements \editable
      * @throws \Exception
      */
 	public function move()
+	{
+		return $this->edit();
+	}
+
+    /**
+     * Automatically switch to edit mode
+     *
+     * @return string
+     * @throws \Exception
+     */
+	public function undo()
+	{
+		return $this->edit();
+	}
+
+    /**
+     * Automatically switch to edit mode
+     *
+     * @return string
+     * @throws \Exception
+     */
+	public function delete()
+	{
+		return $this->edit();
+	}
+
+    /**
+     * Automatically switch to edit mode
+     *
+     * @return string
+     * @throws \Exception
+     */
+	public function show()
+	{
+		return $this->edit();
+	}
+
+    /**
+     * Automatically switch to edit mode
+     *
+     * @return string
+     * @throws \Exception
+     */
+	public function showAll()
 	{
 		return $this->edit();
 	}
