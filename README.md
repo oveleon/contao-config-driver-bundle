@@ -9,7 +9,7 @@ Configuration files located on `ROOT` under `/templates/` are used. If no templa
 ### Why?
 In our case we need a DCA in which we have the possibility to store the fields in another database column to save database queries and performance.
 
-Additionally we want to provide the possibility to deliver a standard configuration which can be extended via the backend. The driver was developed to deliver a basic theme and its SCSS variables from a bundle and let it be consumed or extended by another. For more information you can have a look at our bundle "[Oveleon Theme-Manager](https://github.com/oveleon/contao-oveleon-theme-manager-bundle)", in which the driver is used.
+Additionally we want to provide the possibility to deliver a standard configuration which can be extended via the backend. The driver was developed to deliver a basic theme and its SCSS variables from a bundle and let it be consumed or extended by another. For more information you can have a look at our bundle "[Contao ThemeManager](https://github.com/contao-thememanager/core)", in which the driver is used.
 
 ### Example for saving in localconfig:
 For the storage in the `localconfig`, only two fields are needed.
