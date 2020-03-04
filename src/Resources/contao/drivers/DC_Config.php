@@ -195,29 +195,53 @@ class DC_Config extends \DataContainer implements \listable, \editable
 	private function generateDcaFieldsFromConfig()
     {
         // search config file
-        $strFile = $GLOBALS['TL_DCA'][$this->strTable]['config']['configFile'];
+        $strFile     = $GLOBALS['TL_DCA'][$this->strTable]['config']['configFile'];
+        $blnMultiple = !!$GLOBALS['TL_DCA'][$this->strTable]['config']['multipleConfigFiles'];
         $strFilePath = TL_ROOT . '/templates/' . $strFile;
+
+        $arrFiles  = null;
+        $arrConfig = null;
 
         if(!file_exists($strFilePath))
         {
             try
             {
-                // Search for the template (last match wins)
+                // Search for the template
                 foreach (\System::getContainer()->get('contao.resource_finder')->findIn('templates')->name($strFile) as $file)
                 {
                     /** @var SplFileInfo $file */
-                    $strFilePath = $file->getPathname();
+                    $arrFiles[] = $file->getPathname();
                 }
             }
             catch (\InvalidArgumentException $e){}
         }
 
-        if(!file_exists($strFilePath))
+        if(count($arrFiles) === 1 || (!$blnMultiple && count($arrFiles)))
+        {
+            if(!file_exists($arrFiles[0]))
+            {
+                return false;
+            }
+
+            $arrConfig = include $arrFiles[0];
+        }
+        elseif(count($arrFiles) && $blnMultiple)
+        {
+            foreach ($arrFiles as $strPath)
+            {
+                if(!file_exists($strPath))
+                {
+                    continue;
+                }
+
+                $_config = include $strPath;
+                $arrConfig = $this->mergeConfig($arrConfig, $_config);
+            }
+        }
+        else
         {
             return false;
         }
-
-        $arrConfig = include $strFilePath;
 
         // Set dca fields from config
         $GLOBALS['TL_DCA'][$this->strTable]['fields'] = $arrConfig['fields'];
@@ -233,6 +257,54 @@ class DC_Config extends \DataContainer implements \listable, \editable
         }
 
         return true;
+    }
+
+    /**
+     * Merge config files
+     *
+     * @param $a
+     * @param $b
+     *
+     * @return array
+     */
+    public function mergeConfig($a, $b)
+    {
+        if($a === null)
+        {
+            return $b;
+        }
+
+        $arrMerge = array();
+
+        if($b['palettes'])
+        {
+            foreach ($b['palettes'] as $name => $palette)
+            {
+                if(array_key_exists($name, $a['palettes']))
+                {
+                    $arrMerge['palettes'][ $name ] = $a['palettes'][ $name ] . $b['palettes'][ $name ];
+                }
+                else
+                {
+                    $arrMerge['palettes'][ $name ] = $palette;
+                }
+            }
+        }
+        else
+        {
+            $arrMerge['palettes'] = $a['palettes'];
+        }
+
+        if($b['fields'])
+        {
+            $arrMerge['fields'] = array_merge_recursive($a['fields'], $b['fields']);
+        }
+        else
+        {
+            $arrMerge['fields'] = $a['fields'];
+        }
+
+        return $arrMerge;
     }
 
     /**

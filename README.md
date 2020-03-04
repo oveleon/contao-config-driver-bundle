@@ -35,6 +35,7 @@ For the storage in an existing database column, all fields of the configuration 
 - `ptable`: The table in which the data is to be stored
 - `configField`: The table column in which the data is stored serialized
 - `configFile`: The configuration file to be used (DCA Palette and Fields)
+- `multipleConfigFiles`: Merge all configFiles with same name
 ```php
 $GLOBALS['TL_DCA']['tl_newdca'] = array
 (
@@ -43,7 +44,8 @@ $GLOBALS['TL_DCA']['tl_newdca'] = array
         'dataContainer'               => 'Config',
         'ptable'                      => 'tl_theme', 
         'configField'                 => 'configData',
-        'configFile'                  => 'dcaConfigFile.html5'
+        'configFile'                  => 'dcaConfigFile.html5',
+        'multipleConfigFiles'         => true
     )
 );
 ```
