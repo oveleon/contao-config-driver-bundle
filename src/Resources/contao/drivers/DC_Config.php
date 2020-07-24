@@ -26,13 +26,13 @@ class DC_Config extends \DataContainer implements \listable, \editable
 
     /**
      * Database table
-     * @var boolean
+     * @var string
      */
     protected $table;
 
     /**
      * Database column
-     * @var boolean
+     * @var string
      */
     protected $column;
 
@@ -57,7 +57,7 @@ class DC_Config extends \DataContainer implements \listable, \editable
 		// Build object from global configuration array
 		$this->strTable = $strTable;
 
-		// Set  mode
+		// Set mode
         $this->useDatabase = !empty($GLOBALS['TL_DCA'][$this->strTable]['config']['ptable']);
 
         if($this->useDatabase)
@@ -81,7 +81,19 @@ class DC_Config extends \DataContainer implements \listable, \editable
             return;
         }
 
-		// Call onload_callback (e.g. to check permissions)
+        // Prefill on empty (only database)
+        if($this->useDatabase)
+        {
+            $objDatabase = $this->Database->prepare("SELECT $this->column FROM $this->table WHERE id=?")
+                ->execute($this->intId);
+
+            if (!!$GLOBALS['TL_DCA'][$this->strTable]['config']['fillOnEmpty'] && !$objDatabase->{$this->column})
+            {
+                $this->prefillConfig();
+            }
+        }
+
+        // Call onload_callback (e.g. to check permissions)
 		if (\is_array($GLOBALS['TL_DCA'][$this->strTable]['config']['onload_callback']))
 		{
 			foreach ($GLOBALS['TL_DCA'][$this->strTable]['config']['onload_callback'] as $callback)
@@ -98,6 +110,24 @@ class DC_Config extends \DataContainer implements \listable, \editable
 			}
 		}
 	}
+
+    /**
+     * If the Config has never been saved before, all fields are prefilled
+     */
+	private function prefillConfig()
+    {
+        $arrDefaults = [];
+
+        foreach ($GLOBALS['TL_DCA'][$this->strTable]['fields'] as $key => $field)
+        {
+            $arrDefaults[ $key ] = $field['default'];
+        }
+
+        $deserialize = serialize($arrDefaults);
+
+        $this->Database->prepare("UPDATE " . $this->table . " SET " . $this->column . "=? WHERE id=?")
+            ->execute($deserialize, $this->intId);
+    }
 
     /**
      * Automatically switch to edit mode
@@ -708,6 +738,8 @@ class DC_Config extends \DataContainer implements \listable, \editable
                 \Config::set($this->strField, $deserialize);
             }
 		}
+
+
 	}
 
     /**
