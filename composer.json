@@ -1,47 +1,51 @@
 {
-  "name":"oveleon/contao-config-driver-bundle",
-  "type":"contao-bundle",
-  "description":"Config Driver for Contao Open Source CMS",
-  "keywords":["contao","driver","config"],
-  "homepage":"https://www.oveleon.de/",
-  "license":"MIT",
-  "authors":[
-    {
-      "name":"Oveleon",
-      "homepage":"https://oveleon.de/",
-      "role":"Developer"
-    }
-  ],
-  "require":{
-    "php":"^7.0 || ^8.0",
-    "contao/core-bundle":"^4.4"
-  },
-  "require-dev": {
-    "contao/manager-plugin": "^2.0"
-  },
-  "conflict": {
-    "contao/core": "*",
-    "contao/core-bundle": "4.4.1",
-    "contao/manager-plugin": "<2.0 || >=3.0"
-  },
-  "autoload":{
-    "psr-4": {
-      "Oveleon\\ContaoConfigDriverBundle\\": "src/"
-    },
-    "classmap": [
-      "src/Resources/contao/"
+    "name": "oveleon/contao-config-driver-bundle",
+    "type": "contao-bundle",
+    "description": "Config Driver for Contao Open Source CMS",
+    "keywords": ["contao","driver","config"],
+    "homepage": "https://www.oveleon.de/",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Oveleon",
+            "homepage": "https://oveleon.de/",
+            "role": "Developer"
+        },
+        {
+            "name": "Daniele Sciannimanica",
+            "homepage": "https://github.com/doishub",
+            "role": "Developer"
+        }
     ],
-    "exclude-from-classmap": [
-      "src/Resources/contao/config/",
-      "src/Resources/contao/dca/",
-      "src/Resources/contao/languages/",
-      "src/Resources/contao/templates/"
-    ]
-  },
-  "extra":{
-    "branch-alias": {
-      "dev-master": "1.0.x-dev"
+    "require": {
+        "php": "^8.0",
+        "contao/core-bundle": "^4.9"
     },
-    "contao-manager-plugin": "Oveleon\\ContaoConfigDriverBundle\\ContaoManager\\Plugin"
-  }
+    "require-dev": {
+        "contao/manager-plugin": "^2.0"
+    },
+    "conflict": {
+        "contao/core": "*",
+        "contao/manager-plugin": "<2.0 || >=3.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Oveleon\\ContaoConfigDriverBundle\\": "src/"
+        },
+        "classmap": [
+            "contao/"
+        ],
+        "exclude-from-classmap": [
+            "contao/config/",
+            "contao/dca/",
+            "contao/languages/",
+            "contao/templates/"
+        ]
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-master": "1.1.x-dev"
+        },
+        "contao-manager-plugin": "Oveleon\\ContaoConfigDriverBundle\\ContaoManager\\Plugin"
+    }
 }

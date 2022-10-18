@@ -3,12 +3,18 @@
 /*
  * This file is part of Contao Config Driver Bundle.
  *
- * (c) https://www.oveleon.de/
+ * @package     contao-config-driver-bundle
+ * @license     MIT
+ * @author      Daniele Sciannimanica  <https://github.com/doishub>
+ * @copyright   Oveleon                <https://www.oveleon.de/>
  */
 
 namespace Contao;
 
+use Contao\CoreBundle\Monolog\ContaoContext;
 use Contao\Image\Exception\InvalidArgumentException;
+use Exception;
+use Psr\Log\LogLevel;
 use Symfony\Component\Finder\SplFileInfo;
 use Symfony\Component\HttpFoundation\Session\Attribute\AttributeBagInterface;
 
@@ -20,38 +26,45 @@ use Symfony\Component\HttpFoundation\Session\Attribute\AttributeBagInterface;
 class DC_Config extends DataContainer implements \listable, \editable
 {
     /**
-     * Use database or localconfig
-     * @var boolean
+     * Use database or local config
      */
-    protected $useDatabase = false;
+    protected bool $useDatabase = false;
 
     /**
      * Database table
-     * @var string
      */
-    protected $table;
+    protected string $table;
 
     /**
      * Database column
-     * @var string
      */
-    protected $column;
+    protected string $column;
+
+    /**
+     * Logger
+     */
+    protected  $logger;
 
     /**
 	 * Initialize the object
-	 *
-	 * @param string $strTable
 	 */
-	public function __construct($strTable)
+	public function __construct(string $strTable)
 	{
 		parent::__construct();
+
+        $this->logger = System::getContainer()->get('monolog.logger.contao');
 
 		$this->intId = Input::get('id');
 
 		// Check whether the table is defined
-		if ($strTable == '' || !isset($GLOBALS['TL_DCA'][$strTable]))
+		if ('' == $strTable || !isset($GLOBALS['TL_DCA'][$strTable]))
 		{
-			$this->log('Could not load data container configuration for "' . $strTable . '"', __METHOD__, TL_ERROR);
+            $this->logger->log(
+                LogLevel::ERROR,
+                'Could not load data container configuration for "' . $strTable . '"',
+                ['contao' => new ContaoContext(__METHOD__, TL_ERROR)]
+            );
+
 			trigger_error('Could not load data container configuration', E_USER_ERROR);
 		}
 
@@ -61,29 +74,34 @@ class DC_Config extends DataContainer implements \listable, \editable
 		// Set mode
         $this->useDatabase = !empty($GLOBALS['TL_DCA'][$this->strTable]['config']['ptable']);
 
-        if($this->useDatabase)
+        if ($this->useDatabase)
         {
             $this->table = $GLOBALS['TL_DCA'][$this->strTable]['config']['ptable'];
 
-            if(!empty($GLOBALS['TL_DCA'][$this->strTable]['config']['configField']))
+            if (!empty($GLOBALS['TL_DCA'][$this->strTable]['config']['configField']))
             {
                 $this->column = $GLOBALS['TL_DCA'][$this->strTable]['config']['configField'];
             }
             else
             {
-                $this->log('Storage via the database cannot be prepared due to missing settings: configField', __METHOD__, TL_ERROR);
+                $this->logger->log(
+                    LogLevel::ERROR,
+                    'Storage via the database cannot be prepared due to missing settings: configField',
+                    ['contao' => new ContaoContext(__METHOD__, TL_ERROR)]
+                );
+
                 trigger_error('Storage via the database cannot be prepared due to missing settings: configField', E_USER_ERROR);
             }
         }
 
 		// Create fields from config
-        if(!$this->generateDcaFieldsFromConfig())
+        if (!$this->generateDcaFieldsFromConfig())
         {
             return;
         }
 
         // Prefill on empty (only database)
-        if($this->useDatabase)
+        if ($this->useDatabase)
         {
             $objDatabase = $this->Database->prepare("SELECT $this->column FROM $this->table WHERE id=?")
                 ->execute($this->intId);
@@ -115,7 +133,7 @@ class DC_Config extends DataContainer implements \listable, \editable
     /**
      * If the Config has never been saved before, all fields are prefilled
      */
-	private function prefillConfig()
+	private function prefillConfig(): void
     {
         $arrDefaults = [];
 
@@ -132,108 +150,90 @@ class DC_Config extends DataContainer implements \listable, \editable
 
     /**
      * Automatically switch to edit mode
-     *
-     * @return string
-     * @throws \Exception
+     * @throws Exception
      */
-	public function create()
+	public function create(): string
 	{
 		return $this->edit();
 	}
 
     /**
      * Automatically switch to edit mode
-     *
-     * @return string
-     * @throws \Exception
+     * @throws Exception
      */
-	public function cut()
+	public function cut(): string
 	{
 		return $this->edit();
 	}
 
     /**
      * Automatically switch to edit mode
-     *
-     * @return string
-     * @throws \Exception
+     * @throws Exception
      */
-	public function copy()
+	public function copy(): string
 	{
 		return $this->edit();
 	}
 
     /**
      * Automatically switch to edit mode
-     *
-     * @return string
-     * @throws \Exception
+     * @throws Exception
      */
-	public function move()
+	public function move(): string
 	{
 		return $this->edit();
 	}
 
     /**
      * Automatically switch to edit mode
-     *
-     * @return string
-     * @throws \Exception
+     * @throws Exception
      */
-	public function undo()
+	public function undo(): string
 	{
 		return $this->edit();
 	}
 
     /**
      * Automatically switch to edit mode
-     *
-     * @return string
-     * @throws \Exception
+     * @throws Exception
      */
-	public function delete()
+	public function delete(): string
 	{
 		return $this->edit();
 	}
 
     /**
      * Automatically switch to edit mode
-     *
-     * @return string
-     * @throws \Exception
+     * @throws Exception
      */
-	public function show()
+	public function show(): string
 	{
 		return $this->edit();
 	}
 
     /**
      * Automatically switch to edit mode
-     *
-     * @return string
-     * @throws \Exception
+     * @throws Exception
      */
-	public function showAll()
+	public function showAll(): string
 	{
 		return $this->edit();
 	}
 
     /**
      * Adds fields to dca from config file
-     *
-     * @return bool
      */
-	private function generateDcaFieldsFromConfig()
+	private function generateDcaFieldsFromConfig(): bool
     {
         // search config file
         $strFile     = $GLOBALS['TL_DCA'][$this->strTable]['config']['configFile'];
         $blnMultiple = !!$GLOBALS['TL_DCA'][$this->strTable]['config']['multipleConfigFiles'];
-        $strFilePath = TL_ROOT . '/templates/' . $strFile;
+        $strFilePath = System::getContainer()->getParameter('kernel.project_dir') . '/templates/' . $strFile;
 
         $arrFiles  = null;
         $arrConfig = null;
 
-        if(!file_exists($strFilePath))
+        if (!file_exists($strFilePath))
         {
             try
             {
@@ -247,20 +247,20 @@ class DC_Config extends DataContainer implements \listable, \editable
             catch (InvalidArgumentException $e){}
         }
 
-        if(count($arrFiles) === 1 || (!$blnMultiple && count($arrFiles)))
+        if (count($arrFiles) === 1 || (!$blnMultiple && count($arrFiles)))
         {
-            if(!file_exists($arrFiles[0]))
+            if (!file_exists($arrFiles[0]))
             {
                 return false;
             }
 
             $arrConfig = include $arrFiles[0];
         }
-        elseif(count($arrFiles) && $blnMultiple)
+        elseif (count($arrFiles) && $blnMultiple)
         {
             foreach ($arrFiles as $strPath)
             {
-                if(!file_exists($strPath))
+                if (!file_exists($strPath))
                 {
                     continue;
                 }
@@ -278,7 +278,7 @@ class DC_Config extends DataContainer implements \listable, \editable
         $GLOBALS['TL_DCA'][$this->strTable]['fields'] = $arrConfig['fields'];
 
         // Set palettes
-        if(!empty($arrConfig['palettes']))
+        if (!empty($arrConfig['palettes']))
         {
             $GLOBALS['TL_DCA'][$this->strTable]['palettes'] = $arrConfig['palettes'];
         }
@@ -292,26 +292,21 @@ class DC_Config extends DataContainer implements \listable, \editable
 
     /**
      * Merge config files
-     *
-     * @param $a
-     * @param $b
-     *
-     * @return array
      */
-    public function mergeConfig($a, $b)
+    public function mergeConfig($a, $b): array
     {
-        if($a === null)
+        if (null === $a)
         {
             return $b;
         }
 
-        $arrMerge = array();
+        $arrMerge = [];
 
         if($b['palettes'])
         {
             foreach ($b['palettes'] as $name => $palette)
             {
-                if(array_key_exists($name, $a['palettes']))
+                if (array_key_exists($name, $a['palettes']))
                 {
                     $arrMerge['palettes'][ $name ] = $a['palettes'][ $name ] . $b['palettes'][ $name ];
                 }
@@ -326,7 +321,7 @@ class DC_Config extends DataContainer implements \listable, \editable
             $arrMerge['palettes'] = $a['palettes'];
         }
 
-        if($b['fields'])
+        if ($b['fields'])
         {
             $arrMerge['fields'] = array_merge_recursive($a['fields'], $b['fields']);
         }
@@ -342,9 +337,9 @@ class DC_Config extends DataContainer implements \listable, \editable
      * Auto-generate a form to edit the local configuration file
      *
      * @return string
-     * @throws \Exception
+     * @throws Exception
      */
-	public function edit()
+	public function edit(): string
 	{
 		$return = '';
 		$ajaxId = null;
@@ -357,9 +352,9 @@ class DC_Config extends DataContainer implements \listable, \editable
 		// Build an array from boxes and rows
 		$this->strPalette = $this->getPalette();
 		$boxes = StringUtil::trimsplit(';', $this->strPalette);
-		$legends = array();
+		$legends = [];
 
-        if($this->useDatabase)
+        if ($this->useDatabase)
         {
             $arrValues = $this->getValuesFromDatabase();
         }
@@ -406,9 +401,9 @@ class DC_Config extends DataContainer implements \listable, \editable
 			{
 				$strAjax = '';
 				$blnAjax = false;
-				$key = '';
-				$cls = '';
-				$legend = '';
+				$key     = '';
+				$cls     = '';
+				$legend  = '';
 
 				if (isset($legends[$k]))
 				{
@@ -455,7 +450,7 @@ class DC_Config extends DataContainer implements \listable, \editable
 					$this->strField = $vv;
 					$this->strInputName = $vv;
 
-                    if($this->useDatabase)
+                    if ($this->useDatabase)
                     {
                         $this->varValue = $arrValues[$this->strField];
                     }
@@ -511,7 +506,7 @@ class DC_Config extends DataContainer implements \listable, \editable
 			}
 		}
 
-        if(!$this->useDatabase)
+        if (!$this->useDatabase)
         {
             $this->import('Files');
 
@@ -523,7 +518,7 @@ class DC_Config extends DataContainer implements \listable, \editable
         }
 
 		// Submit buttons
-		$arrButtons = array();
+		$arrButtons = [];
 		$arrButtons['save'] = '<button type="submit" name="save" id="save" class="tl_submit" accesskey="s">' . $GLOBALS['TL_LANG']['MSC']['save'] . '</button>';
 		$arrButtons['saveNclose'] = '<button type="submit" name="saveNclose" id="saveNclose" class="tl_submit" accesskey="c">' . $GLOBALS['TL_LANG']['MSC']['saveNclose'] . '</button>';
 
@@ -613,10 +608,8 @@ class DC_Config extends DataContainer implements \listable, \editable
 
 	/**
 	 * Save the current value
-	 *
-	 * @param mixed $varValue
 	 */
-	protected function save($varValue)
+	protected function save($varValue): void
 	{
 		if (Input::post('FORM_SUBMIT') != $this->strTable)
 		{
@@ -649,7 +642,7 @@ class DC_Config extends DataContainer implements \listable, \editable
 			}
 
 			// Convert date formats into timestamps
-			if ($varValue !== null && $varValue !== '' && \in_array(($arrData['eval']['rgxp'] ?? ''), array('date', 'time', 'datim')))
+			if ($varValue !== null && $varValue !== '' && \in_array(($arrData['eval']['rgxp'] ?? ''), ['date', 'time', 'datim']))
 			{
 				$objDate = new Date($varValue, Date::getFormatFromRgxp($arrData['eval']['rgxp']));
 				$varValue = $objDate->tstamp;
@@ -703,7 +696,7 @@ class DC_Config extends DataContainer implements \listable, \editable
 		// Save the value if there was no error
 		if ((\strlen($varValue) || !($arrData['eval']['doNotSaveEmpty'] ?? false)) && $strCurrent != $varValue)
 		{
-		    if($this->useDatabase)
+		    if ($this->useDatabase)
             {
                 $arrValues = $this->getValuesFromDatabase();
 
@@ -726,11 +719,19 @@ class DC_Config extends DataContainer implements \listable, \editable
                 {
                     if ($arrData['inputType'] == 'password' || $arrData['inputType'] == 'textStore')
                     {
-                        $this->log('The global configuration variable "' . $this->strField . '" has been changed', __METHOD__, TL_CONFIGURATION);
+                        $this->logger->log(
+                            TL_CONFIGURATION,
+                            'The global configuration variable "' . $this->strField . '" has been changed',
+                            ['contao' => new ContaoContext(__METHOD__, TL_CONFIGURATION)]
+                        );
                     }
                     else
                     {
-                        $this->log('The global configuration variable "' . $this->strField . '" has been changed from "' . $prior . '" to "' . $varValue . '"', __METHOD__, TL_CONFIGURATION);
+                        $this->logger->log(
+                            TL_CONFIGURATION,
+                            'The global configuration variable "' . $this->strField . '" has been changed from "' . $prior . '" to "' . $varValue . '"',
+                            ['contao' => new ContaoContext(__METHOD__, TL_CONFIGURATION)]
+                        );
                     }
                 }
 
@@ -739,16 +740,13 @@ class DC_Config extends DataContainer implements \listable, \editable
                 Config::set($this->strField, $deserialize);
             }
 		}
-
-
 	}
 
     /**
      * Return the values of fields from database
-     *
-     * @return array
      */
-	private function getValuesFromDatabase(){
+	private function getValuesFromDatabase(): array
+    {
         // Get the field values from ptable
         $objRow = $this->Database->prepare("SELECT " . $this->column . " FROM " . $this->table . " WHERE id=?")
             ->limit(1)
@@ -759,10 +757,8 @@ class DC_Config extends DataContainer implements \listable, \editable
 
 	/**
 	 * Return the name of the current palette
-	 *
-	 * @return string
 	 */
-	public function getPalette()
+	public function getPalette(): string
 	{
 		$palette = 'default';
 		$strPalette = $GLOBALS['TL_DCA'][$this->strTable]['palettes'][$palette];
@@ -770,8 +766,8 @@ class DC_Config extends DataContainer implements \listable, \editable
 		// Check whether there are selector fields
 		if (!empty($GLOBALS['TL_DCA'][$this->strTable]['palettes']['__selector__']))
 		{
-			$sValues = array();
-			$subpalettes = array();
+			$sValues = [];
+			$subpalettes = [];
 
 			foreach ($GLOBALS['TL_DCA'][$this->strTable]['palettes']['__selector__'] as $name)
 			{
@@ -788,7 +784,7 @@ class DC_Config extends DataContainer implements \listable, \editable
 					}
 				}
 
-				if ($trigger != '')
+				if ('' != $trigger)
 				{
 					if ($GLOBALS['TL_DCA'][$this->strTable]['fields'][$name]['inputType'] == 'checkbox' && !$GLOBALS['TL_DCA'][$this->strTable]['fields'][$name]['eval']['multiple'])
 					{
@@ -817,7 +813,7 @@ class DC_Config extends DataContainer implements \listable, \editable
 			// Build possible palette names from the selector values
 			if (empty($sValues))
 			{
-				$names = array('default');
+				$names = ['default'];
 			}
 			elseif (\count($sValues) > 1)
 			{
@@ -825,7 +821,7 @@ class DC_Config extends DataContainer implements \listable, \editable
 			}
 			else
 			{
-				$names = array($sValues[0]);
+				$names = [$sValues[0]];
 			}
 
 			// Get an existing palette
