@@ -452,7 +452,7 @@ class DC_Config extends DataContainer implements \listable, \editable
 
                     if ($this->useDatabase)
                     {
-                        $this->varValue = $arrValues[$this->strField];
+                        $this->varValue = $arrValues[$this->strField] ?? null;
                     }
                     else
                     {
