@@ -101,15 +101,9 @@ class DC_Config extends DataContainer implements \listable, \editable
         }
 
         // Prefill on empty (only database)
-        if ($this->useDatabase)
+        if ($this->useDatabase && !!$GLOBALS['TL_DCA'][$this->strTable]['config']['fillOnEmpty'] && empty($this->getValuesFromDatabase()))
         {
-            $objDatabase = $this->Database->prepare("SELECT $this->column FROM $this->table WHERE id=?")
-                ->execute($this->intId);
-
-            if (!!$GLOBALS['TL_DCA'][$this->strTable]['config']['fillOnEmpty'] && !$objDatabase->{$this->column})
-            {
-                $this->prefillConfig();
-            }
+            $this->prefillConfig();
         }
 
         // Call onload_callback (e.g. to check permissions)
@@ -142,10 +136,7 @@ class DC_Config extends DataContainer implements \listable, \editable
             $arrDefaults[ $key ] = $field['default'] ?? '';
         }
 
-        $deserialize = serialize($arrDefaults);
-
-        $this->Database->prepare("UPDATE " . $this->table . " SET " . $this->column . "=? WHERE id=?")
-            ->execute($deserialize, $this->intId);
+        $this->updateConfig($arrDefaults);
     }
 
     /**
@@ -702,10 +693,7 @@ class DC_Config extends DataContainer implements \listable, \editable
 
                 $arrValues[$this->strField] = $varValue;
 
-                $deserialize = serialize($arrValues);
-
-                $this->Database->prepare("UPDATE " . $this->table . " SET " . $this->column . "=? WHERE id=?")
-                    ->execute($deserialize, $this->intId);
+                $this->updateConfig($arrValues);
             }
 		    else
 		    {
@@ -741,6 +729,15 @@ class DC_Config extends DataContainer implements \listable, \editable
             }
 		}
 	}
+
+    /**
+     * Updates the configuration in the database
+     */
+    private function updateConfig(array $arrConfig): void
+    {
+        $this->Database->prepare("UPDATE " . $this->table . " SET " . $this->column . "=? WHERE id=?")
+             ->execute(serialize($arrConfig), $this->intId);
+    }
 
     /**
      * Return the values of fields from database
