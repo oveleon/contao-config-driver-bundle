@@ -113,23 +113,26 @@ class DC_Config extends DataContainer implements ListableDataContainerInterface,
         // search config file
         $strFile = $GLOBALS['TL_DCA'][$this->strTable]['config']['configFile'];
         $blnMultiple = !!$GLOBALS['TL_DCA'][$this->strTable]['config']['multipleConfigFiles'];
-        $strFilePath = System::getContainer()->getParameter('kernel.project_dir') . '/templates/' . $strFile;
 
-        $arrFiles  = null;
+        $arrFiles  = [];
         $arrConfig = null;
 
-        if (!file_exists($strFilePath))
+        // Always search for templates within bundles
+        try
         {
-            try
+
+            foreach (System::getContainer()->get('contao.resource_finder')->findIn('templates')->name($strFile) as $file)
             {
-                // Search for the template
-                foreach (System::getContainer()->get('contao.resource_finder')->findIn('templates')->name($strFile) as $file)
-                {
-                    /** @var SplFileInfo $file */
-                    $arrFiles[] = $file->getPathname();
-                }
+                /** @var SplFileInfo $file */
+                $arrFiles[] = $file->getPathname();
             }
-            catch (InvalidArgumentException $e){}
+        }
+        catch (InvalidArgumentException $e){}
+
+        // Allow adding additional templates within contao / templates folder
+        if (file_exists($strFilePath = System::getContainer()->getParameter('kernel.project_dir') . '/templates/' . $strFile))
+        {
+            $arrFiles[] = $strFilePath;
         }
 
         if (count($arrFiles) === 1 || (!$blnMultiple && count($arrFiles)))
