@@ -353,6 +353,28 @@ class DC_Config extends DataContainer implements ListableDataContainerInterface,
                     $class .= (($cls && $legend) ? ' ' . $cls : '');
                 }
 
+                // Add possibility to set custom classes into fieldset legends
+                if ($cls && 'hide' !== $cls)
+                {
+                    $class .= (!empty($class) ? ' ' : '') . str_replace('hide ', '', $cls);
+
+                    // Add possibility to create palette group legends
+                    if (str_contains($class, 'palette-group'))
+                    {
+                        $paletteGroup = '';
+                        $this->extractPaletteGroupHeader($paletteGroup, $class);
+
+                        if (isset($GLOBALS['TL_LANG'][$this->strTable][$paletteGroup]))
+                        {
+                            $return .= vsprintf("\n\n".'<div class="%s"><div class="%s">%s</div></div>', [
+                                'tl_box palette-group',
+                                'palette-group-header',
+                                $GLOBALS['TL_LANG'][$this->strTable][$paletteGroup]
+                            ]);
+                        }
+                    }
+                }
+
                 $return .= "\n\n" . '<fieldset' . ($key ? ' id="pal_' . $key . '"' : '') . ' class="' . $class . ($legend ? '' : ' nolegend') . '">' . $legend;
 
                 // Build rows of the current box
@@ -778,6 +800,17 @@ class DC_Config extends DataContainer implements ListableDataContainerInterface,
                 $this->varValue = $deserialize;
                 Config::set($this->strField, $deserialize);
             }
+        }
+    }
+
+    protected function extractPaletteGroupHeader(&$attribute, &$string): void
+    {
+        $pattern = '/palette-group\[(.*?)\]/';
+
+        if (preg_match($pattern, $string, $matches))
+        {
+            $attribute = $matches[1];
+            $string = rtrim(preg_replace($pattern, '', $string));
         }
     }
 }
