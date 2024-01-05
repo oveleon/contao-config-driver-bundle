@@ -11,6 +11,7 @@
 
 namespace Contao;
 
+use Contao\CoreBundle\ContaoCoreBundle;
 use Contao\Image\Exception\InvalidArgumentException;
 use Exception;
 use Symfony\Component\Finder\SplFileInfo;
@@ -338,25 +339,55 @@ class DC_Config extends DataContainer implements ListableDataContainerInterface,
                 $cls = '';
                 $legend = '';
 
-                if (isset($legends[$k]))
+                $version = ContaoCoreBundle::getVersion();
+
+                if (version_compare($version, '5', '<'))
                 {
-                    list($key, $cls) = explode(':', $legends[$k]);
-                    $legend = "\n" . '<legend onclick="AjaxRequest.toggleFieldset(this, \'' . $key . '\', \'' . $this->strTable . '\')">' . (isset($GLOBALS['TL_LANG'][$this->strTable][$key]) ? $GLOBALS['TL_LANG'][$this->strTable][$key] : $key) . '</legend>';
+                    $version = 413;
+                }
+                else if (version_compare($version, '5.3', '<'))
+                {
+                    $version = 5;
+                }
+                else {
+                    $version = 53;
                 }
 
-                if (isset($fs[$this->strTable][$key]))
+                if (isset($legends[$k]))
                 {
-                    $class .= ($fs[$this->strTable][$key] ? '' : ' collapsed');
+                    list($key, $cls) = explode(':', $legends[$k]) + array(null, null);
+
+                    $legend = match ($version) {
+                        53 => "\n" . '<legend data-action="click->contao--toggle-fieldset#toggle">' . ($GLOBALS['TL_LANG'][$this->strTable][$key] ?? $key) . '</legend>',
+                        5 => "\n" . '<legend data-toggle-fieldset="' . StringUtil::specialcharsAttribute(json_encode(array('id' => $key, 'table' => $this->strTable))) . '">' . ($GLOBALS['TL_LANG'][$this->strTable][$key] ?? $key) . '</legend>',
+                        default => "\n" . '<legend onclick="AjaxRequest.toggleFieldset(this, \'' . $key . '\', \'' . $this->strTable . '\')">' . ($GLOBALS['TL_LANG'][$this->strTable][$key] ?? $key) . '</legend>',
+                    };
                 }
-                else
+
+                $collapseCls = 'hide';
+
+                if ($legend)
                 {
-                    $class .= (($cls && $legend) ? ' ' . $cls : '');
+                    if (isset($fs[$this->strTable][$key]))
+                    {
+                        $class .= ($fs[$this->strTable][$key] ? '' : ' collapsed');
+                    }
+                    elseif ($cls)
+                    {
+                        // Contao 5.3 -> Convert the ":hide" suffix from the DCA
+                        if (53 === $version && $cls == $collapseCls)
+                        {
+                            $cls = $collapseCls = 'collapsed';
+                        }
+
+                        $class .= ' ' . $cls;
+                    }
                 }
 
                 // Add possibility to set custom classes into fieldset legends
-                if ($cls && 'hide' !== $cls)
+                if ($cls && $collapseCls !== $cls)
                 {
-                    $class .= (!empty($class) ? ' ' : '') . str_replace('hide ', '', $cls);
+                    $class .= (!empty($class) ? ' ' : '') . str_replace($collapseCls . ' ', '', $cls);
 
                     // Add possibility to create palette group legends
                     if (str_contains($class, 'palette-group'))
@@ -375,7 +406,14 @@ class DC_Config extends DataContainer implements ListableDataContainerInterface,
                     }
                 }
 
-                $return .= "\n\n" . '<fieldset' . ($key ? ' id="pal_' . $key . '"' : '') . ' class="' . $class . ($legend ? '' : ' nolegend') . '">' . $legend;
+                if (53 === $version)
+                {
+                    $return .= "\n\n" . '<fieldset class="' . $class . ($legend ? '' : ' nolegend') . '" data-controller="contao--toggle-fieldset" data-contao--toggle-fieldset-id-value="' . $key . '" data-contao--toggle-fieldset-table-value="' . $this->strTable . '" data-contao--toggle-fieldset-collapsed-class="collapsed" data-contao--jump-targets-target="section" data-contao--jump-targets-label-value="' . ($GLOBALS['TL_LANG'][$this->strTable][$key] ?? $key) . '" data-action="contao--jump-targets:scrollto->contao--toggle-fieldset#open">' . $legend;
+                }
+                else
+                {
+                    $return .= "\n\n" . '<fieldset' . ($key ? ' id="pal_' . $key . '"' : '') . ' class="' . $class . ($legend ? '' : ' nolegend') . '">' . $legend;
+                }
 
                 // Build rows of the current box
                 foreach ($v as $vv)
