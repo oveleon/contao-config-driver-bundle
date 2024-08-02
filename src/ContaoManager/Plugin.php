@@ -21,9 +21,6 @@ use Oveleon\ContaoConfigDriverBundle\ContaoConfigDriverBundle;
 
 class Plugin implements BundlePluginInterface
 {
-    /**
-     * {@inheritdoc}
-     */
     public function getBundles(ParserInterface $parser): array
     {
         return [

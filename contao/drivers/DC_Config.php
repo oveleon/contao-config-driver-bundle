@@ -83,7 +83,7 @@ class DC_Config extends DataContainer implements ListableDataContainerInterface,
         }
 
         // Prefill on empty (only database)
-        if ($this->useDatabase && !!$GLOBALS['TL_DCA'][$this->strTable]['config']['fillOnEmpty'] && empty($this->getValuesFromDatabase()))
+        if ($this->useDatabase && (bool) $GLOBALS['TL_DCA'][$this->strTable]['config']['fillOnEmpty'] && $this->getValuesFromDatabase() === [])
         {
             $this->prefillConfig();
         }
@@ -113,7 +113,7 @@ class DC_Config extends DataContainer implements ListableDataContainerInterface,
     {
         // search config file
         $strFile = $GLOBALS['TL_DCA'][$this->strTable]['config']['configFile'];
-        $blnMultiple = !!$GLOBALS['TL_DCA'][$this->strTable]['config']['multipleConfigFiles'];
+        $blnMultiple = (bool) $GLOBALS['TL_DCA'][$this->strTable]['config']['multipleConfigFiles'];
 
         $arrFiles  = [];
         $arrConfig = null;
@@ -210,14 +210,7 @@ class DC_Config extends DataContainer implements ListableDataContainerInterface,
             $arrMerge['palettes'] = $a['palettes'];
         }
 
-        if ($b['fields'])
-        {
-            $arrMerge['fields'] = array_merge_recursive($a['fields'], $b['fields']);
-        }
-        else
-        {
-            $arrMerge['fields'] = $a['fields'];
-        }
+        $arrMerge['fields'] = $b['fields'] ? array_merge_recursive($a['fields'], $b['fields']) : $a['fields'];
 
         return $arrMerge;
     }
@@ -270,7 +263,6 @@ class DC_Config extends DataContainer implements ListableDataContainerInterface,
     /**
      * Auto-generate a form to edit the local configuration file
      *
-     * @return string
      * @throws Exception
      */
     public function edit(): string
@@ -301,14 +293,14 @@ class DC_Config extends DataContainer implements ListableDataContainerInterface,
 
                 foreach ($boxes[$k] as $kk => $vv)
                 {
-                    if (preg_match('/^\[.*]$/', $vv))
+                    if (preg_match('/^\[.*]$/', (string) $vv))
                     {
                         continue;
                     }
 
-                    if (preg_match('/^{.*}$/', $vv))
+                    if (preg_match('/^{.*}$/', (string) $vv))
                     {
-                        $legends[$k] = substr($vv, 1, -1);
+                        $legends[$k] = substr((string) $vv, 1, -1);
                         unset($boxes[$k][$kk]);
                     }
                     elseif (($GLOBALS['TL_DCA'][$this->strTable]['fields'][$vv]['exclude'] ?? null) || !\is_array($GLOBALS['TL_DCA'][$this->strTable]['fields'][$vv]))
@@ -341,32 +333,21 @@ class DC_Config extends DataContainer implements ListableDataContainerInterface,
 
                 $version = ContaoCoreBundle::getVersion();
 
-                if (version_compare($version, '5', '<'))
-                {
-                    $version = 413;
-                }
-                else if (version_compare($version, '5.3', '<'))
-                {
-                    $version = 5;
-                }
-                else {
-                    $version = 53;
-                }
+                $version = version_compare($version, '5', '<') ? 413 : 5;
 
                 if (isset($legends[$k]))
                 {
-                    list($key, $cls) = explode(':', $legends[$k]) + array(null, null);
+                    [$key, $cls] = explode(':', $legends[$k]) + [null, null];
 
                     $legend = match ($version) {
-                        53 => "\n" . '<legend data-action="click->contao--toggle-fieldset#toggle">' . ($GLOBALS['TL_LANG'][$this->strTable][$key] ?? $key) . '</legend>',
-                        5 => "\n" . '<legend data-toggle-fieldset="' . StringUtil::specialcharsAttribute(json_encode(array('id' => $key, 'table' => $this->strTable))) . '">' . ($GLOBALS['TL_LANG'][$this->strTable][$key] ?? $key) . '</legend>',
+                        5 => "\n" . '<legend data-action="click->contao--toggle-fieldset#toggle">' . ($GLOBALS['TL_LANG'][$this->strTable][$key] ?? $key) . '</legend>',
                         default => "\n" . '<legend onclick="AjaxRequest.toggleFieldset(this, \'' . $key . '\', \'' . $this->strTable . '\')">' . ($GLOBALS['TL_LANG'][$this->strTable][$key] ?? $key) . '</legend>',
                     };
                 }
 
                 $collapseCls = 'hide';
 
-                if ($legend)
+                if ($legend !== '' && $legend !== '0')
                 {
                     if (isset($fs[$this->strTable][$key]))
                     {
@@ -374,8 +355,8 @@ class DC_Config extends DataContainer implements ListableDataContainerInterface,
                     }
                     elseif ($cls)
                     {
-                        // Contao 5.3 -> Convert the ":hide" suffix from the DCA
-                        if (53 === $version && $cls == $collapseCls)
+                        // Contao ^5.3 -> Convert the ":hide" suffix from the DCA
+                        if (5 === $version && $cls === $collapseCls)
                         {
                             $cls = $collapseCls = 'collapsed';
                         }
@@ -387,7 +368,7 @@ class DC_Config extends DataContainer implements ListableDataContainerInterface,
                 // Add possibility to set custom classes into fieldset legends
                 if ($cls && $collapseCls !== $cls)
                 {
-                    $class .= (!empty($class) ? ' ' : '') . str_replace($collapseCls . ' ', '', $cls);
+                    $class .= ($class === '' || $class === '0' ? '' : ' ') . str_replace($collapseCls . ' ', '', $cls);
 
                     // Add possibility to create palette group legends
                     if (str_contains($class, 'palette-group'))
@@ -406,13 +387,13 @@ class DC_Config extends DataContainer implements ListableDataContainerInterface,
                     }
                 }
 
-                if (53 === $version)
+                if (5 === $version)
                 {
-                    $return .= "\n\n" . '<fieldset class="' . $class . ($legend ? '' : ' nolegend') . '" data-controller="contao--toggle-fieldset" data-contao--toggle-fieldset-id-value="' . $key . '" data-contao--toggle-fieldset-table-value="' . $this->strTable . '" data-contao--toggle-fieldset-collapsed-class="collapsed" data-contao--jump-targets-target="section" data-contao--jump-targets-label-value="' . ($GLOBALS['TL_LANG'][$this->strTable][$key] ?? $key) . '" data-action="contao--jump-targets:scrollto->contao--toggle-fieldset#open">' . $legend;
+                    $return .= "\n\n" . '<fieldset class="' . $class . ($legend !== '' && $legend !== '0' ? '' : ' nolegend') . '" data-controller="contao--toggle-fieldset" data-contao--toggle-fieldset-id-value="' . $key . '" data-contao--toggle-fieldset-table-value="' . $this->strTable . '" data-contao--toggle-fieldset-collapsed-class="collapsed" data-contao--jump-targets-target="section" data-contao--jump-targets-label-value="' . ($GLOBALS['TL_LANG'][$this->strTable][$key] ?? $key) . '" data-action="contao--jump-targets:scrollto->contao--toggle-fieldset#open">' . $legend;
                 }
                 else
                 {
-                    $return .= "\n\n" . '<fieldset' . ($key ? ' id="pal_' . $key . '"' : '') . ' class="' . $class . ($legend ? '' : ' nolegend') . '">' . $legend;
+                    $return .= "\n\n" . '<fieldset' . ($key ? ' id="pal_' . $key . '"' : '') . ' class="' . $class . ($legend !== '' && $legend !== '0' ? '' : ' nolegend') . '">' . $legend;
                 }
 
                 // Build rows of the current box
@@ -431,10 +412,10 @@ class DC_Config extends DataContainer implements ListableDataContainerInterface,
                         continue;
                     }
 
-                    if (preg_match('/^\[.*]$/', $vv))
+                    if (preg_match('/^\[.*]$/', (string) $vv))
                     {
-                        $thisId = 'sub_' . substr($vv, 1, -1);
-                        $blnAjax = ($ajaxId == $thisId && Environment::get('isAjaxRequest')) ? true : false;
+                        $thisId = 'sub_' . substr((string) $vv, 1, -1);
+                        $blnAjax = $ajaxId == $thisId && Environment::get('isAjaxRequest');
                         $return .= "\n  " . '<div id="' . $thisId . '" class="subpal cf">';
 
                         continue;
@@ -443,22 +424,12 @@ class DC_Config extends DataContainer implements ListableDataContainerInterface,
                     $this->strField = $vv;
                     $this->strInputName = $vv;
 
-                    if ($this->useDatabase)
-                    {
-                        $this->varValue = $arrValues[$this->strField] ?? null;
-                    }
-                    else
-                    {
-                        $this->varValue = Config::get($this->strField);
-                    }
+                    $this->varValue = $this->useDatabase ? $arrValues[$this->strField] ?? null : Config::get($this->strField);
 
                     // Handle entities
-                    if (($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['inputType'] ?? null) == 'text' || ($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['inputType'] ?? null) == 'textarea')
+                    if ((($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['inputType'] ?? null) == 'text' || ($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['inputType'] ?? null) == 'textarea') && ($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['eval']['multiple'] ?? null))
                     {
-                        if ($GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['eval']['multiple'] ?? null)
-                        {
-                            $this->varValue = StringUtil::deserialize($this->varValue);
-                        }
+                        $this->varValue = StringUtil::deserialize($this->varValue);
                     }
 
                     // Call load_callback
@@ -536,10 +507,10 @@ class DC_Config extends DataContainer implements ListableDataContainerInterface,
 <div id="tl_buttons">
 <a href="' . $this->getReferer(true) . '" class="header_back" title="' . StringUtil::specialchars($GLOBALS['TL_LANG']['MSC']['backBTTitle']) . '" accesskey="b" onclick="Backend.getScrollOffset()">' . $GLOBALS['TL_LANG']['MSC']['backBT'] . '</a>
 </div>
-<form action="' . StringUtil::ampersand(Environment::get('request'), true) . '" id="' . $this->strTable . '" class="tl_form tl_edit_form" method="post"' . (!empty($this->onsubmit) ? ' onsubmit="' . implode(' ', $this->onsubmit) . '"' : '') . '>
+<form action="' . StringUtil::ampersand(Environment::get('request'), true) . '" id="' . $this->strTable . '" class="tl_form tl_edit_form" method="post"' . (empty($this->onsubmit) ? '' : ' onsubmit="' . implode(' ', $this->onsubmit) . '"') . '>
 <div class="tl_formbody_edit">
 <input type="hidden" name="FORM_SUBMIT" value="' . $this->strTable . '">
-<input type="hidden" name="REQUEST_TOKEN" value="' . htmlspecialchars(System::getContainer()->get('contao.csrf.token_manager')->getDefaultTokenValue()) . '">
+<input type="hidden" name="REQUEST_TOKEN" value="' . htmlspecialchars((string) System::getContainer()->get('contao.csrf.token_manager')->getDefaultTokenValue()) . '">
 <input type="hidden" name="FORM_FIELDS[]" value="' . StringUtil::specialchars($this->strPalette) . '">' . $return;
 
         // Reload the page to prevent _POST variables from being sent twice
@@ -636,7 +607,7 @@ class DC_Config extends DataContainer implements ListableDataContainerInterface,
             }
 
             // Build possible palette names from the selector values
-            if (empty($sValues))
+            if ($sValues === [])
             {
                 $names = ['default'];
             }
@@ -747,7 +718,7 @@ class DC_Config extends DataContainer implements ListableDataContainerInterface,
         // Make sure that checkbox values are boolean
         if (($arrData['inputType'] ?? null) == 'checkbox' && !($arrData['eval']['multiple'] ?? null))
         {
-            $varValue = $varValue ? true : false;
+            $varValue = (bool) $varValue;
         }
 
         if ($varValue)
@@ -767,7 +738,7 @@ class DC_Config extends DataContainer implements ListableDataContainerInterface,
             }
 
             // Convert date formats into timestamps
-            if ($varValue !== null && $varValue !== '' && \in_array($arrData['eval']['rgxp'] ?? null, array('date', 'time', 'datim')))
+            if ($varValue !== null && $varValue !== '' && \in_array($arrData['eval']['rgxp'] ?? null, ['date', 'time', 'datim']))
             {
                 $objDate = new Date($varValue, Date::getFormatFromRgxp($arrData['eval']['rgxp']));
                 $varValue = $objDate->tstamp;
@@ -800,11 +771,11 @@ class DC_Config extends DataContainer implements ListableDataContainerInterface,
         }
         elseif (\is_string($strCurrent))
         {
-            $strCurrent = html_entity_decode($this->varValue, ENT_QUOTES, System::getContainer()->getParameter('kernel.charset'));
+            $strCurrent = html_entity_decode((string) $this->varValue, ENT_QUOTES, System::getContainer()->getParameter('kernel.charset'));
         }
 
         // Save the value if there was no error
-        if ((\strlen($varValue) || !($arrData['eval']['doNotSaveEmpty'] ?? false)) && $strCurrent != $varValue)
+        if ((\strlen((string) $varValue) || !($arrData['eval']['doNotSaveEmpty'] ?? false)) && $strCurrent != $varValue)
         {
             if ($this->useDatabase)
             {
@@ -845,7 +816,7 @@ class DC_Config extends DataContainer implements ListableDataContainerInterface,
     {
         $pattern = '/palette-group\[(.*?)\]/';
 
-        if (preg_match($pattern, $string, $matches))
+        if (preg_match($pattern, (string) $string, $matches))
         {
             $attribute = $matches[1];
             $string = rtrim(preg_replace($pattern, '', $string));
