@@ -23,7 +23,7 @@
   ],
   "require": {
     "php": "^8.1",
-    "contao/core-bundle": "^4.13 || ^5.3",
+    "contao/core-bundle": "^4.13 || ^5.3.13",
     "contao/image": "^1.0",
     "symfony/http-kernel": "^5.4 || ^6.4 || ^7.0"
   },

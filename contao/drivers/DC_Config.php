@@ -340,7 +340,7 @@ class DC_Config extends DataContainer implements ListableDataContainerInterface,
                     [$key, $cls] = explode(':', $legends[$k]) + [null, null];
 
                     $legend = match ($version) {
-                        5 => "\n" . '<legend data-action="click->contao--toggle-fieldset#toggle">' . ($GLOBALS['TL_LANG'][$this->strTable][$key] ?? $key) . '</legend>',
+                        5 => "\n" . '<legend><button type="button" data-action="contao--toggle-fieldset#toggle">' . ($GLOBALS['TL_LANG'][$this->strTable][$key] ?? $key) . '</button></legend>',
                         default => "\n" . '<legend onclick="AjaxRequest.toggleFieldset(this, \'' . $key . '\', \'' . $this->strTable . '\')">' . ($GLOBALS['TL_LANG'][$this->strTable][$key] ?? $key) . '</legend>',
                     };
                 }
