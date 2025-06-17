@@ -14,6 +14,7 @@ namespace Contao;
 use Contao\CoreBundle\ContaoCoreBundle;
 use Contao\Image\Exception\InvalidArgumentException;
 use Exception;
+use Symfony\Component\DependencyInjection\ParameterBag\ParameterBag;
 use Symfony\Component\Finder\SplFileInfo;
 use Symfony\Component\HttpFoundation\Session\Session;
 
@@ -33,6 +34,8 @@ class DC_Config extends DataContainer implements ListableDataContainerInterface,
      * Database table
      */
     protected string $table;
+
+    protected ParameterBag $parameterBag;
 
     /**
      * Database column
@@ -57,6 +60,8 @@ class DC_Config extends DataContainer implements ListableDataContainerInterface,
 
         // Build object from global configuration array
         $this->strTable = $strTable;
+
+        $this->parameterBag = System::getContainer()->getParameterBag();
 
         // Set mode
         $this->useDatabase = !empty($GLOBALS['TL_DCA'][$this->strTable]['config']['ptable']);
@@ -446,6 +451,18 @@ class DC_Config extends DataContainer implements ListableDataContainerInterface,
                             {
                                 $this->varValue = $callback($this->varValue, $this);
                             }
+                        }
+                    }
+
+                    $options = $GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['options'] ?? null;
+
+                    if (null !== $options && !\is_array($options))
+                    {
+                        $resolved = $this->parameterBag->resolveString($options);
+
+                        if (\is_array($resolved))
+                        {
+                            $GLOBALS['TL_DCA'][$this->strTable]['fields'][$this->strField]['options'] = $resolved;
                         }
                     }
 
