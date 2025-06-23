@@ -11,7 +11,6 @@
 
 namespace Contao;
 
-use Contao\CoreBundle\ContaoCoreBundle;
 use Contao\Image\Exception\InvalidArgumentException;
 use Exception;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBag;
@@ -336,21 +335,14 @@ class DC_Config extends DataContainer implements ListableDataContainerInterface,
                 $cls = '';
                 $legend = '';
 
-                $version = ContaoCoreBundle::getVersion();
-
-                $version = version_compare($version, '5', '<') ? 413 : 5;
-
                 if (isset($legends[$k]))
                 {
                     [$key, $cls] = explode(':', $legends[$k]) + [null, null];
 
-                    $legend = match ($version) {
-                        5 => "\n" . '<legend><button type="button" data-action="contao--toggle-fieldset#toggle">' . ($GLOBALS['TL_LANG'][$this->strTable][$key] ?? $key) . '</button></legend>',
-                        default => "\n" . '<legend onclick="AjaxRequest.toggleFieldset(this, \'' . $key . '\', \'' . $this->strTable . '\')">' . ($GLOBALS['TL_LANG'][$this->strTable][$key] ?? $key) . '</legend>',
-                    };
+                    $legend = '<legend><button type="button" data-action="contao--toggle-fieldset#toggle">' . ($GLOBALS['TL_LANG'][$this->strTable][$key] ?? $key) . '</button></legend>';
                 }
 
-                $collapseCls = 'hide';
+                $collapseCls = 'collapsed';
 
                 if ($legend !== '' && $legend !== '0')
                 {
@@ -360,10 +352,10 @@ class DC_Config extends DataContainer implements ListableDataContainerInterface,
                     }
                     elseif ($cls)
                     {
-                        // Contao ^5.3 -> Convert the ":hide" suffix from the DCA
-                        if (5 === $version && $cls === $collapseCls)
+                        // Convert the ":hide" suffix from the DCA
+                        if ($cls === 'hide')
                         {
-                            $cls = $collapseCls = 'collapsed';
+                            $cls = 'collapsed';
                         }
 
                         $class .= ' ' . $cls;
@@ -392,14 +384,10 @@ class DC_Config extends DataContainer implements ListableDataContainerInterface,
                     }
                 }
 
-                if (5 === $version)
-                {
-                    $return .= "\n\n" . '<fieldset class="' . $class . ($legend !== '' && $legend !== '0' ? '' : ' nolegend') . '" data-controller="contao--toggle-fieldset" data-contao--toggle-fieldset-id-value="' . $key . '" data-contao--toggle-fieldset-table-value="' . $this->strTable . '" data-contao--toggle-fieldset-collapsed-class="collapsed" data-contao--jump-targets-target="section" data-contao--jump-targets-label-value="' . ($GLOBALS['TL_LANG'][$this->strTable][$key] ?? $key) . '" data-action="contao--jump-targets:scrollto->contao--toggle-fieldset#open">' . $legend;
-                }
-                else
-                {
-                    $return .= "\n\n" . '<fieldset' . ($key ? ' id="pal_' . $key . '"' : '') . ' class="' . $class . ($legend !== '' && $legend !== '0' ? '' : ' nolegend') . '">' . $legend;
-                }
+                // Remove hide classes completely
+                $class = str_replace(' hide', '', $class);
+
+                $return .= "\n\n" . '<fieldset class="' . $class . ($legend !== '' && $legend !== '0' ? '' : ' nolegend') . '" data-controller="contao--toggle-fieldset" data-contao--toggle-fieldset-id-value="' . $key . '" data-contao--toggle-fieldset-table-value="' . $this->strTable . '" data-contao--toggle-fieldset-collapsed-class="collapsed" data-contao--jump-targets-target="section" data-contao--jump-targets-label-value="' . ($GLOBALS['TL_LANG'][$this->strTable][$key] ?? $key) . '" data-action="contao--jump-targets:scrollto->contao--toggle-fieldset#open">' . $legend;
 
                 // Build rows of the current box
                 foreach ($v as $vv)
@@ -565,6 +553,12 @@ class DC_Config extends DataContainer implements ListableDataContainerInterface,
   });
 </script>';
         }
+
+        $return = '
+<div data-controller="contao--jump-targets">
+	<div class="jump-targets"><div class="inner" data-contao--jump-targets-target="navigation"></div></div>
+	' . $return . '
+</div>';
 
         return $return;
     }
