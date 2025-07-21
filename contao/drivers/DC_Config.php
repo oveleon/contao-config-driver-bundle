@@ -353,9 +353,9 @@ class DC_Config extends DataContainer implements ListableDataContainerInterface,
                     elseif ($cls)
                     {
                         // Convert the ":hide" suffix from the DCA
-                        if ($cls === 'hide')
+                        if (str_contains($cls, 'hide'))
                         {
-                            $cls = 'collapsed';
+                            $cls = str_replace('hide', 'collapsed', $cls);
                         }
 
                         $class .= ' ' . $cls;
